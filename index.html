@@ -4,158 +4,272 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AXIOM Music • Infinite Gaussian Fractal Studio</title>
+
   <style>
-    body { margin:0; overflow:hidden; background:#0a001f; font-family:monospace; }
-    #command { 
-      position:absolute; bottom:30px; left:50%; transform:translateX(-50%); 
-      background:rgba(0,255,255,0.15); color:#00ffff; padding:14px 28px; 
-      border-radius:9999px; border:2px solid #00ffff; font-size:22px; 
-      width:460px; text-align:center; box-shadow:0 0 50px #00ffff; 
-      pointer-events:auto; z-index:100;
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #0a001f;
+      font-family: monospace;
+    }
+
+    #command {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,255,255,0.15);
+      color: #00ffff;
+      padding: 14px 28px;
+      border-radius: 9999px;
+      border: 2px solid #00ffff;
+      font-size: 22px;
+      width: 460px;
+      text-align: center;
+      box-shadow: 0 0 50px #00ffff;
+      outline: none;
     }
   </style>
 </head>
+
 <body>
-  <div id="command">Type command + Enter (e.g. rossler, ai, zoom in)</div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-  <script>
-    const TEXTURES = {
-      nebula:      "textures/1-toroidal-nebula.png",
-      rossler:     "textures/2-rossler-attractor.png",
-      ai:          "textures/3-ai-nebula.png",
-      collab:      "textures/4-collaboration-vines.png",
-      marketplace: "textures/5-marketplace-nebula.png",
-      education:   "textures/6-education-torus.png",
-      overlay:     "textures/7-overall-texture.png",
-      commandOrb:  "textures/8-command-orb.png"
-    };
 
-    let rossler = { x:0.1, y:0, z:0, a:0.2, b:0.2, c:5.7, dt:1/44100,
-      step() {
-        const dx = -this.y - this.z;
-        const dy = this.x + this.a * this.y;
-        const dz = this.b + this.z * (this.x - this.c);
-        this.x += this.dt * dx; this.y += this.dt * dy; this.z += this.dt * dz;
-        return {x:this.x, y:this.y, z:this.z};
-      }
-    };
+<input id="command" placeholder="Type command + Enter (e.g. rossler, ai, zoom in)" />
 
-    let scene, camera, renderer, points, attractorLine, commandOrbMesh;
-    let time = 0;
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 
-    function initScene() {
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 10000);
-      renderer = new THREE.WebGLRenderer({antialias:true});
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(window.devicePixelRatio);
-      document.body.appendChild(renderer.domElement);
+<script>
+const TEXTURES = {
+  nebula:      "textures/1-toroidal-nebula.png",
+  rossler:     "textures/2-rossler-attractor.png",
+  ai:          "textures/3-ai-nebula.png",
+  collab:      "textures/4-collaboration-vines.png",
+  marketplace: "textures/5-marketplace-nebula.png",
+  education:   "textures/6-education-torus.png",
+  overlay:     "textures/7-overall-texture.png",
+  commandOrb:  "textures/8-command-orb.png"
+};
 
-      const loader = new THREE.TextureLoader();
+let rossler = {
+  x:0.1, y:0, z:0,
+  a:0.2, b:0.2, c:5.7,
+  dt:1/44100,
+  step() {
+    const dx = -this.y - this.z;
+    const dy = this.x + this.a * this.y;
+    const dz = this.b + this.z * (this.x - this.c);
+    this.x += this.dt * dx;
+    this.y += this.dt * dy;
+    this.z += this.dt * dz;
+    return {x:this.x, y:this.y, z:this.z};
+  }
+};
 
-      // Main toroidal festival nebula point cloud
-      loader.load(TEXTURES.nebula, tex => {
-        const geo = new THREE.BufferGeometry();
-        const pos = new Float32Array(15000);
-        const col = new Float32Array(15000);
-        for (let i = 0; i < 15000; i += 3) {
-          const a = Math.random() * Math.PI * 2;
-          const r = 12 + Math.random() * 8;
-          pos[i]   = Math.cos(a) * r;
-          pos[i+1] = (Math.random()-0.5)*10;
-          pos[i+2] = Math.sin(a) * r;
-          col[i] = 0.9; col[i+1] = 0.5; col[i+2] = 1;
-        }
-        geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
-        geo.setAttribute('color', new THREE.BufferAttribute(col,3));
-        const mat = new THREE.PointsMaterial({size:0.22, vertexColors:true, transparent:true, opacity:0.92, blending:THREE.AdditiveBlending, map:tex, depthTest:false});
-        points = new THREE.Points(geo, mat);
-        scene.add(points);
-      });
+let scene, camera, renderer, points, attractorLine, commandOrbMesh;
+let time = 0;
 
-      // Rössler attractor ribbon
-      loader.load(TEXTURES.rossler, tex => {
-        const lineGeo = new THREE.BufferGeometry();
-        const linePos = new Float32Array(2400);
-        lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos,3));
-        const lineMat = new THREE.LineBasicMaterial({color:0x00ffff, linewidth:8, transparent:true, opacity:0.95, map:tex});
-        attractorLine = new THREE.Line(lineGeo, lineMat);
-        scene.add(attractorLine);
-      });
+function initScene() {
+  scene = new THREE.Scene();
 
-      // Node billboards + overlay + command orb (same as before)
-      const nodeTextures = [TEXTURES.ai, TEXTURES.collab, TEXTURES.marketplace, TEXTURES.education];
-      nodeTextures.forEach((url,i) => {
-        loader.load(url, tex => {
-          const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false}));
-          sprite.scale.set(8,8,1);
-          sprite.position.set((i-1.5)*15, 10, -12 + i*4);
-          scene.add(sprite);
-        });
-      });
+  camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    10000
+  );
 
-      loader.load(TEXTURES.overlay, tex => {
-        const plane = new THREE.Mesh(new THREE.PlaneGeometry(120,120), new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:0.3, blending:THREE.AdditiveBlending, side:THREE.DoubleSide}));
-        plane.position.z = -45;
-        scene.add(plane);
-      });
+  renderer = new THREE.WebGLRenderer({ antialias:true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  document.body.appendChild(renderer.domElement);
 
-      loader.load(TEXTURES.commandOrb, tex => {
-        commandOrbMesh = new THREE.Mesh(new THREE.SphereGeometry(2.2,64,64), new THREE.MeshBasicMaterial({map:tex, transparent:true, side:THREE.DoubleSide}));
-        commandOrbMesh.position.set(0,-14,0);
-        scene.add(commandOrbMesh);
-      });
+  const loader = new THREE.TextureLoader();
 
-      camera.position.set(0,18,42);
-      camera.lookAt(0,0,0);
+  // Nebula points
+  loader.load(TEXTURES.nebula, tex => {
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(15000);
+    const col = new Float32Array(15000);
+
+    for (let i = 0; i < 15000; i += 3) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 12 + Math.random() * 8;
+
+      pos[i]   = Math.cos(a) * r;
+      pos[i+1] = (Math.random() - 0.5) * 10;
+      pos[i+2] = Math.sin(a) * r;
+
+      col[i] = 0.9;
+      col[i+1] = 0.5;
+      col[i+2] = 1;
     }
 
-    function animate() {
-      requestAnimationFrame(animate);
-      time += 0.014;
+    geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col,3));
 
-      if (rossler) {
-        const s = rossler.step();
-        if (attractorLine) {
-          const pos = attractorLine.geometry.attributes.position.array;
-          for (let i = 2397; i >= 3; i--) pos[i] = pos[i-3];
-          pos[0] = s.x*4.5; pos[1] = s.y*4.5; pos[2] = s.z*4.5;
-          attractorLine.geometry.attributes.position.needsUpdate = true;
-        }
-        if (points) points.rotation.y = time*0.09 + s.x*0.12;
-      }
+    const mat = new THREE.PointsMaterial({
+      size:0.22,
+      vertexColors:true,
+      transparent:true,
+      opacity:0.92,
+      blending:THREE.AdditiveBlending,
+      map:tex,
+      depthTest:false
+    });
 
-      if (points) points.rotation.x = Math.sin(time*0.35)*0.035;
-      if (commandOrbMesh) commandOrbMesh.rotation.y = time*0.8;
+    points = new THREE.Points(geo, mat);
+    scene.add(points);
+  });
 
-      renderer.render(scene, camera);
+  // Rössler line
+  loader.load(TEXTURES.rossler, tex => {
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(2400);
+
+    geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+
+    const mat = new THREE.LineBasicMaterial({
+      color:0x00ffff,
+      transparent:true,
+      opacity:0.95
+    });
+
+    attractorLine = new THREE.Line(geo, mat);
+    scene.add(attractorLine);
+  });
+
+  // Nodes
+  const nodeTextures = [
+    TEXTURES.ai,
+    TEXTURES.collab,
+    TEXTURES.marketplace,
+    TEXTURES.education
+  ];
+
+  nodeTextures.forEach((url,i) => {
+    loader.load(url, tex => {
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map:tex,
+          transparent:true,
+          depthTest:false
+        })
+      );
+
+      sprite.scale.set(8,8,1);
+      sprite.position.set((i-1.5)*15, 10, -12 + i*4);
+      scene.add(sprite);
+    });
+  });
+
+  // Overlay
+  loader.load(TEXTURES.overlay, tex => {
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(120,120),
+      new THREE.MeshBasicMaterial({
+        map:tex,
+        transparent:true,
+        opacity:0.3,
+        blending:THREE.AdditiveBlending,
+        side:THREE.DoubleSide
+      })
+    );
+
+    plane.position.z = -45;
+    scene.add(plane);
+  });
+
+  // Command orb
+  loader.load(TEXTURES.commandOrb, tex => {
+    commandOrbMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(2.2,64,64),
+      new THREE.MeshBasicMaterial({
+        map:tex,
+        transparent:true,
+        side:THREE.DoubleSide
+      })
+    );
+
+    commandOrbMesh.position.set(0,-14,0);
+    scene.add(commandOrbMesh);
+  });
+
+  camera.position.set(0,18,42);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  time += 0.014;
+
+  if (rossler && attractorLine) {
+    const s = rossler.step();
+    const pos = attractorLine.geometry.attributes.position.array;
+
+    for (let i = 2397; i >= 3; i--) {
+      pos[i] = pos[i-3];
     }
 
-    // Type-to-fly + infinite zoom
-    document.getElementById('command').addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        const cmd = e.target.textContent.trim().toLowerCase();
-        e.target.textContent = '';
-        if (cmd.includes('rossler')) camera.position.set(0,6,12);
-        else if (cmd.includes('ai')) camera.position.set(22,14,18);
-        else if (cmd.includes('zoom')) camera.position.multiplyScalar(cmd.includes('in') ? 0.65 : 1.75);
-      }
-    });
+    pos[0] = s.x * 4.5;
+    pos[1] = s.y * 4.5;
+    pos[2] = s.z * 4.5;
 
-    window.addEventListener('wheel', e => {
-      camera.position.multiplyScalar(e.deltaY > 0 ? 1.22 : 0.82);
-    });
+    attractorLine.geometry.attributes.position.needsUpdate = true;
+  }
 
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+  if (points) {
+    points.rotation.y += 0.002;
+    points.rotation.x = Math.sin(time * 0.3) * 0.03;
+  }
 
-    // Start
-    initScene();
-    animate();
-    console.log("%c✅ AXIOM Music Fractal Live on GitHub Pages", "color:#00ffff;font-size:20px");
-  </script>
+  if (commandOrbMesh) {
+    commandOrbMesh.rotation.y += 0.01;
+  }
+
+  renderer.render(scene, camera);
+}
+
+// COMMAND INPUT FIXED
+const input = document.getElementById("command");
+
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    const cmd = input.value.trim().toLowerCase();
+    input.value = "";
+
+    if (cmd.includes("rossler")) {
+      camera.position.set(0,6,12);
+    }
+    else if (cmd.includes("ai")) {
+      camera.position.set(22,14,18);
+    }
+    else if (cmd.includes("zoom")) {
+      const factor = cmd.includes("in") ? 0.65 : 1.75;
+      camera.position.multiplyScalar(factor);
+    }
+  }
+});
+
+// Scroll zoom
+window.addEventListener("wheel", (e) => {
+  camera.position.multiplyScalar(e.deltaY > 0 ? 1.2 : 0.8);
+});
+
+// Resize
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Start
+initScene();
+animate();
+
+// Auto focus input
+input.focus();
+
+console.log("AXIOM Music Fractal Live");
+</script>
+
 </body>
 </html>
